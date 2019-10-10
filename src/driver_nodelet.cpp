@@ -108,11 +108,11 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
     uint64_t serial_no = std::stoi(sensor);
     Json::Value val = root[sensor.c_str()];
     
-    if (!val["transform"].isArray()) {
+    if (!val["translation"].isArray()) {
       ROS_ERROR("Malformed JSON translation array for serial number [%lu]", serial_no);
     } else if (!val["rotation"].isArray()) {
       ROS_ERROR("Malformed JSON rotation array for serial number [%lu]", serial_no);
-    } else if (val["transform"].size() != 3) {
+    } else if (val["translation"].size() != 3) {
       ROS_ERROR("Incorrect number of elements in translation array for serial number [%lu]", serial_no);
     } else if (val["rotation"].size() != 4) {
       ROS_ERROR("Incorrect number of elements in rotation array for serial number [%lu]", serial_no);
@@ -120,9 +120,9 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
       geometry_msgs::TransformStamped transform;
       transform.header.frame_id = parent_frame_id;
       transform.child_frame_id = (combine_sensors) ? "cepton_0" : ("cepton_" + std::to_string(serial_no));
-      transform.transform.translation.x = val["transform"][0].asDouble();
-      transform.transform.translation.y = val["transform"][1].asDouble();
-      transform.transform.translation.z = val["transform"][2].asDouble();
+      transform.transform.translation.x = val["translation"][0].asDouble();
+      transform.transform.translation.y = val["translation"][1].asDouble();
+      transform.transform.translation.z = val["translation"][2].asDouble();
       transform.transform.rotation.x = val["rotation"][0].asDouble();
       transform.transform.rotation.y = val["rotation"][1].asDouble();
       transform.transform.rotation.z = val["rotation"][2].asDouble();
