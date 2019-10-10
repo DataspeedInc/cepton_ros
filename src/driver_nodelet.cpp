@@ -117,8 +117,6 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
       ROS_ERROR("Malformed JSON rotation array for serial number [%lu]", serial_no);
     } else if (val["translation"].size() != 3) {
       ROS_ERROR("Incorrect number of elements in translation array for serial number [%lu]", serial_no);
-    } else if (val["rotation"].size() != 4) {
-      ROS_ERROR("Incorrect number of elements in rotation array for serial number [%lu]", serial_no);
     } else {
       geometry_msgs::TransformStamped transform;
       transform.header.frame_id = parent_frame_id;
@@ -126,10 +124,18 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
       transform.transform.translation.x = val["translation"][0].asDouble();
       transform.transform.translation.y = val["translation"][1].asDouble();
       transform.transform.translation.z = val["translation"][2].asDouble();
-      transform.transform.rotation.x = val["rotation"][0].asDouble();
-      transform.transform.rotation.y = val["rotation"][1].asDouble();
-      transform.transform.rotation.z = val["rotation"][2].asDouble();
-      transform.transform.rotation.w = val["rotation"][3].asDouble();
+      if (val["rotation"].size() == 4) {
+        transform.transform.rotation.x = val["rotation"][0].asDouble();
+        transform.transform.rotation.y = val["rotation"][1].asDouble();
+        transform.transform.rotation.z = val["rotation"][2].asDouble();
+        transform.transform.rotation.w = val["rotation"][3].asDouble();
+      } else if (val["rotation"].size() == 3) {
+        tf2::Quaternion q;
+        q.setRPY(val["rotation"][0].asDouble(), val["rotation"][1].asDouble(), val["rotation"][2].asDouble());
+        tf2::convert(q, transform.transform.rotation);
+      } else {
+        ROS_ERROR("Incorrect number of rotation array elements. Use 3 for RPY, 4 for quaternion");
+      }
       tf_broadcaster.sendTransform(transform);
     }
 
