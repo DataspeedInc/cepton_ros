@@ -19,9 +19,6 @@ void DriverNodelet::onInit() {
   private_node_handle = getPrivateNodeHandle();
 
   // Get parameters
-  private_node_handle.param("combine_sensors", combine_sensors,
-                            combine_sensors);
-
   private_node_handle.param("parent_frame_id", parent_frame_id, std::string("cepton"));
 
   bool capture_loop = true;

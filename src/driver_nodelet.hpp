@@ -43,7 +43,6 @@ class DriverNodelet : public nodelet::Nodelet {
   ros::NodeHandle node_handle;
   ros::NodeHandle private_node_handle;
 
-  bool combine_sensors = false;
   std::string parent_frame_id;
 
   cepton_sdk::api::SensorErrorCallback error_callback;
