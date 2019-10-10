@@ -22,6 +22,8 @@ void DriverNodelet::onInit() {
   private_node_handle.param("combine_sensors", combine_sensors,
                             combine_sensors);
 
+  private_node_handle.param("parent_frame_id", parent_frame_id, std::string("cepton"));
+
   bool capture_loop = true;
   private_node_handle.param("capture_loop", capture_loop, capture_loop);
 
@@ -34,6 +36,12 @@ void DriverNodelet::onInit() {
   std::string frame_mode_str = "CYCLE";
   private_node_handle.param("frame_mode", frame_mode_str, frame_mode_str);
   const cepton_sdk::FrameMode frame_mode = frame_mode_lut.at(frame_mode_str);
+
+  std::string transforms_path = "";
+  private_node_handle.param("transforms_path", transforms_path, transforms_path);
+  if (!transforms_path.empty()) {
+    parse_transforms_file(transforms_path);
+  }
 
   sensor_info_publisher =
       node_handle.advertise<SensorInformation>("cepton/sensor_information", 2);
@@ -87,6 +95,41 @@ void DriverNodelet::onInit() {
           ros::shutdown();
         }
       });
+}
+
+void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
+{
+  Json::Value root;
+  std::ifstream file(transforms_path.c_str());
+  file >> root;
+  
+  Json::Value::Members list_of_serial_nos = root.getMemberNames();
+  for (auto sensor : list_of_serial_nos) {
+    uint64_t serial_no = std::stoi(sensor);
+    Json::Value val = root[sensor.c_str()];
+    
+    if (!val["transform"].isArray()) {
+      ROS_ERROR("Malformed JSON translation array for serial number [%lu]", serial_no);
+    } else if (!val["rotation"].isArray()) {
+      ROS_ERROR("Malformed JSON rotation array for serial number [%lu]", serial_no);
+    } else if (val["transform"].size() != 3) {
+      ROS_ERROR("Incorrect number of elements in translation array for serial number [%lu]", serial_no);
+    } else if (val["rotation"].size() != 4) {
+      ROS_ERROR("Incorrect number of elements in rotation array for serial number [%lu]", serial_no);
+    } else {
+      geometry_msgs::TransformStamped transform;
+      transform.header.frame_id = parent_frame_id;
+      transform.child_frame_id = (combine_sensors) ? "cepton_0" : ("cepton_" + std::to_string(serial_no));
+      transform.transform.translation.x = val["transform"][0].asDouble();
+      transform.transform.translation.y = val["transform"][1].asDouble();
+      transform.transform.translation.z = val["transform"][2].asDouble();
+      transform.transform.rotation.x = val["rotation"][0].asDouble();
+      transform.transform.rotation.y = val["rotation"][1].asDouble();
+      transform.transform.rotation.z = val["rotation"][2].asDouble();
+      transform.transform.rotation.w = val["rotation"][3].asDouble();
+      tf_broadcaster.sendTransform(transform);
+    }
+  }
 }
 
 void DriverNodelet::on_image_points(
