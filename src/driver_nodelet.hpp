@@ -9,6 +9,7 @@
 #include <cepton_sdk_api.hpp>
 #include <jsoncpp/json/json.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include "cepton_ros/SensorInformation.h"
 #include "cepton_ros/common.hpp"
@@ -36,6 +37,7 @@ class DriverNodelet : public nodelet::Nodelet {
       const cepton_sdk::SensorInformation &sensor_info);
   void publish_points(uint64_t serial_number);
   void parse_transforms_file(const std::string& transforms_path);
+  void set_up_default_transform();
 
  private:
   ros::NodeHandle node_handle;
@@ -48,12 +50,14 @@ class DriverNodelet : public nodelet::Nodelet {
   cepton_sdk::api::SensorImageFrameCallback image_frame_callback;
 
   ros::Timer watchdog_timer;
-  ros::Publisher sensor_info_publisher;
-  ros::Publisher points_publisher;
   tf2_ros::StaticTransformBroadcaster tf_broadcaster;
 
   std::vector<cepton_sdk::SensorImagePoint> image_points;
   std::vector<cepton_sdk::util::SensorPoint> points;
   CeptonPointCloud point_cloud;
+  
+  std::map<uint64_t, std::string> frame_ids;
+  std::map<uint64_t, ros::Publisher> points_publishers;
+  std::map<uint64_t, ros::Publisher> sensor_info_publishers;
 };
 }  // namespace cepton_ros

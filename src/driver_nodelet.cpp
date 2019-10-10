@@ -41,12 +41,9 @@ void DriverNodelet::onInit() {
   private_node_handle.param("transforms_path", transforms_path, transforms_path);
   if (!transforms_path.empty()) {
     parse_transforms_file(transforms_path);
+  } else {
+    set_up_default_transform();
   }
-
-  sensor_info_publisher =
-      node_handle.advertise<SensorInformation>("cepton/sensor_information", 2);
-  points_publisher =
-      node_handle.advertise<CeptonPointCloud>("cepton/points", 2);
 
   // Initialize sdk
   cepton_sdk::SensorError error;
@@ -107,6 +104,12 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
   for (auto sensor : list_of_serial_nos) {
     uint64_t serial_no = std::stoi(sensor);
     Json::Value val = root[sensor.c_str()];
+
+    if (val.isMember("frame_id")) {
+      frame_ids[serial_no] = val["frame_id"].asString();
+    } else {
+      frame_ids[serial_no] = "cepton_" + std::to_string(serial_no);
+    }
     
     if (!val["translation"].isArray()) {
       ROS_ERROR("Malformed JSON translation array for serial number [%lu]", serial_no);
@@ -119,7 +122,7 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
     } else {
       geometry_msgs::TransformStamped transform;
       transform.header.frame_id = parent_frame_id;
-      transform.child_frame_id = (combine_sensors) ? "cepton_0" : ("cepton_" + std::to_string(serial_no));
+      transform.child_frame_id = frame_ids[serial_no];
       transform.transform.translation.x = val["translation"][0].asDouble();
       transform.transform.translation.y = val["translation"][1].asDouble();
       transform.transform.translation.z = val["translation"][2].asDouble();
@@ -129,7 +132,30 @@ void DriverNodelet::parse_transforms_file(const std::string& transforms_path)
       transform.transform.rotation.w = val["rotation"][3].asDouble();
       tf_broadcaster.sendTransform(transform);
     }
+
+    std::string points_topic;
+    std::string info_topic;
+    if (val.isMember("topic_name")) {
+      points_topic = "cepton/" + val["topic_name"].asString();
+      info_topic = "cepton/" + val["topic_name"].asString() + "_info";
+    } else {
+      points_topic = "cepton/points_" + std::to_string(serial_no);
+      info_topic = "cepton/sensor_information_" + std::to_string(serial_no);
+    }
+    points_publishers[serial_no] = node_handle.advertise<CeptonPointCloud>(points_topic, 1);
+    sensor_info_publishers[serial_no] = node_handle.advertise<SensorInformation>(info_topic, 1);
   }
+}
+
+void DriverNodelet::set_up_default_transform()
+{
+  geometry_msgs::TransformStamped transform;
+  transform.header.frame_id = parent_frame_id;
+  transform.child_frame_id = "cepton_0";
+  transform.transform.rotation.w = 1.0;
+  tf_broadcaster.sendTransform(transform);
+  points_publishers[0] = node_handle.advertise<CeptonPointCloud>("cepton/points", 1);
+  sensor_info_publishers[0] = node_handle.advertise<SensorInformation>("cepton/sensor_information", 1);
 }
 
 void DriverNodelet::on_image_points(
@@ -193,7 +219,18 @@ void DriverNodelet::publish_sensor_information(
   const uint8_t *const sensor_info_bytes = (const uint8_t *)&sensor_info;
   msg.data = std::vector<uint8_t>(sensor_info_bytes,
                                   sensor_info_bytes + sizeof(sensor_info));
-  sensor_info_publisher.publish(msg);
+
+  if (sensor_info_publishers.find(sensor_info.serial_number) == sensor_info_publishers.end()) {
+    if (points_publishers.find(0) == points_publishers.end()) {
+      // Default settings for serial number "0" not found; create a new publisher for this unexpected sensor
+      sensor_info_publishers[sensor_info.serial_number] = node_handle.advertise<SensorInformation>("cepton/sensor_info_" + std::to_string(sensor_info.serial_number), 1);
+    } else {
+      // Use default settings from serial number "0"
+      sensor_info_publishers[0].publish(msg);
+    }
+  } else {
+    sensor_info_publishers[sensor_info.serial_number].publish(msg);
+  }
 }
 
 void DriverNodelet::publish_points(uint64_t serial_number) {
@@ -207,16 +244,29 @@ void DriverNodelet::publish_points(uint64_t serial_number) {
 
   point_cloud.clear();
   point_cloud.header.stamp = rosutil::to_usec(ros::Time::now());
-  point_cloud.header.frame_id =
-      (combine_sensors) ? "cepton_0"
-                        : ("cepton_" + std::to_string(serial_number));
+  if (frame_ids.find(serial_number) == frame_ids.end()) {
+    point_cloud.header.frame_id = "cepton_0";
+  } else {
+    point_cloud.header.frame_id = frame_ids[serial_number];
+  }
   point_cloud.height = 1;
   point_cloud.width = points.size();
   point_cloud.resize(points.size());
   for (std::size_t i = 0; i < points.size(); ++i) {
     point_cloud.points[i] = points[i];
   }
-  points_publisher.publish(point_cloud);
+
+  if (points_publishers.find(serial_number) == points_publishers.end()) {
+    if (points_publishers.find(0) == points_publishers.end()) {
+      // Default settings for serial number "0" not found; create a new publisher for this unexpected sensor
+      points_publishers[serial_number] = node_handle.advertise<CeptonPointCloud>("cepton/points_" + std::to_string(serial_number), 1);
+    } else {
+      // Use default settings from serial number "0"
+      points_publishers[0].publish(point_cloud);
+    }
+  } else {
+    points_publishers[serial_number].publish(point_cloud);
+  }
 }
 
 }  // namespace cepton_ros
