@@ -57,22 +57,22 @@ void DriverNodelet::onInit() {
   } else {
     set_up_default_transform();
   }
-///////////////////join mcast group/////////////
-
-    struct sockaddr_in localif_cepton;
-    struct ip_mreq mreq_cepton;
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    localif_cepton.sin_family = AF_INET;
-    localif_cepton.sin_port   = htons(port_number);
-    localif_cepton.sin_addr.s_addr = htonl(INADDR_ANY);
-    bind(s, (sockaddr *)&localif_cepton, sizeof(localif_cepton));
-    mreq_cepton.imr_interface.s_addr = inet_addr(local_ip.c_str());
-    mreq_cepton.imr_multiaddr.s_addr = inet_addr(multi_ip.c_str());
-    int reuse = 1;
-    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
-    perror("setsockopt(SO_REUSEADDR) failed");
-    setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq_cepton, sizeof(mreq_cepton));
-//////////////////////////////////////////////////////////////////////////////////////////////
+  
+  ///////////////////join mcast group/////////////
+  struct sockaddr_in localif_cepton;
+  struct ip_mreq mreq_cepton;
+  int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  localif_cepton.sin_family = AF_INET;
+  localif_cepton.sin_port   = htons(port_number);
+  localif_cepton.sin_addr.s_addr = htonl(INADDR_ANY);
+  bind(s, (sockaddr *)&localif_cepton, sizeof(localif_cepton));
+  mreq_cepton.imr_interface.s_addr = inet_addr(local_ip.c_str());
+  mreq_cepton.imr_multiaddr.s_addr = inet_addr(multi_ip.c_str());
+  int reuse = 1;
+  if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
+  perror("setsockopt(SO_REUSEADDR) failed");
+  setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&mreq_cepton, sizeof(mreq_cepton));
+  //////////////////////////////////////////////////////////////////////////////////////////////
 
   // Initialize sdk
   cepton_sdk::SensorError error;
