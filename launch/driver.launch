@@ -11,6 +11,10 @@ Depends on `manager.launch`.
   <arg name="transforms_path" default="" doc="Sensor transforms json file path."/>
   <arg name="parent_frame_id" default="cepton" doc="Parent transform frame."/>
 
+  <arg name="local_ip" default="192.168.0.100" doc="computer local ip."/>
+  <arg name="multi_ip" default="232.67.69.80" doc="multicast ip."/>
+  <arg name="port_number" default="8808" doc="multicast port number."/>
+
   <node pkg="nodelet" type="nodelet" name="cepton_driver" required="true" args="load cepton_ros/DriverNodelet $(arg manager_name)" output="screen">
     <param name="capture_path" value="$(arg capture_path)"/>
     <param name="capture_loop" value="$(arg capture_loop)"/>
@@ -18,6 +22,10 @@ Depends on `manager.launch`.
     <param name="frame_mode" value="$(arg frame_mode)"/>
     <param name="transforms_path" value="$(arg transforms_path)"/>
     <param name="parent_frame_id" value="$(arg parent_frame_id)"/>
+    
+    <param name="local_ip" value="$(arg local_ip)"/>
+    <param name="multi_ip" value="$(arg multi_ip)"/>
+    <param name="port_number" value="$(arg port_number)"/>
   </node>
 
 </launch>

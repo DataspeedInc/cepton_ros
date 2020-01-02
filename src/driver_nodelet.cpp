@@ -26,6 +26,15 @@ void DriverNodelet::onInit() {
   private_node_handle = getPrivateNodeHandle();
 
   // Get parameters
+  std::string multi_ip;
+  private_node_handle.param("multi_ip", multi_ip, multi_ip); 
+
+  std::string local_ip;
+  private_node_handle.param("local_ip", local_ip, local_ip); 
+
+  int port_number;
+  private_node_handle.param("port_number", port_number, port_number); 
+
   private_node_handle.param("parent_frame_id", parent_frame_id, std::string("cepton"));
 
   bool capture_loop = true;
@@ -48,20 +57,17 @@ void DriverNodelet::onInit() {
   } else {
     set_up_default_transform();
   }
-
-
 ///////////////////join mcast group/////////////
 
     struct sockaddr_in localif_cepton;
     struct ip_mreq mreq_cepton;
     int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     localif_cepton.sin_family = AF_INET;
-    localif_cepton.sin_port   = htons(8808);
+    localif_cepton.sin_port   = htons(port_number); //port number 8808 port_number
     localif_cepton.sin_addr.s_addr = htonl(INADDR_ANY);
     bind(s, (sockaddr *)&localif_cepton, sizeof(localif_cepton));
-    mreq_cepton.imr_interface.s_addr = inet_addr("192.168.0.100");
-   //mreq.imr_multiaddr.s_addr = inet_addr("232.79.85.83");
-    mreq_cepton.imr_multiaddr.s_addr = inet_addr("232.67.69.80");
+    mreq_cepton.imr_interface.s_addr = inet_addr(local_ip.c_str()); // local_ip 192.168.0.100
+    mreq_cepton.imr_multiaddr.s_addr = inet_addr(multi_ip.c_str());  // multi_ip ip 232.67.69.80
     int reuse = 1;
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse)) < 0)
     perror("setsockopt(SO_REUSEADDR) failed");
