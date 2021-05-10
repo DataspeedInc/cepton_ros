@@ -35,7 +35,7 @@ void DriverNodelet::onInit() {
   int port_number;
   private_node_handle.param("port_number", port_number, 0); 
 
-  private_node_handle.param("parent_frame_id", parent_frame_id, std::string("cepton"));
+  private_node_handle.param("parent_frame_id", parent_frame_id, std::string(""));
 
   bool capture_loop = true;
   private_node_handle.param("capture_loop", capture_loop, capture_loop);
@@ -52,12 +52,14 @@ void DriverNodelet::onInit() {
 
   std::string transforms_path = "";
   private_node_handle.param("transforms_path", transforms_path, transforms_path);
-  if (!transforms_path.empty()) {
-    parse_transforms_file(transforms_path);
-  } else {
-    set_up_default_transform();
+  if (!parent_frame_id.empty()) {
+    if (!transforms_path.empty()) {
+      parse_transforms_file(transforms_path);
+    } else {
+      set_up_default_transform();
+    }
   }
-  
+
   ///////////////////join mcast group/////////////
   struct sockaddr_in localif_cepton;
   struct ip_mreq mreq_cepton;
